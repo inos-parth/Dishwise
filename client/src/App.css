@@ -1,0 +1,25 @@
+.page-container {
+    padding: 100px 2rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Poppins', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .app {
+    min-height: 100vh;
+  }
+  
+  .main-content {
+    padding-top: 70px; /* Height of navbar */
+  }
