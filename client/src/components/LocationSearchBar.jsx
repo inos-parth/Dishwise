@@ -1,17 +1,10 @@
-import React, { useState } from 'react';
-import { useLoadScript } from '@react-google-maps/api';
+import React, { useState, useEffect } from 'react';
 import './LocationSearchBar.css';
 
-const libraries = ['places'];
-
-const LocationSearchBar = () => {
+const LocationSearchBar = ({ onLocationSelect }) => {
   const [searchInput, setSearchInput] = useState('');
   const [showLocationOptions, setShowLocationOptions] = useState(false);
-
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY, // Replace with your API key
-    libraries: libraries,
-  });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const getCurrentLocation = () => {
     if (navigator.geolocation) {
@@ -19,14 +12,22 @@ const LocationSearchBar = () => {
         async (position) => {
           const { latitude, longitude } = position.coords;
           try {
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=AIzaSyBKm9cPiFuU_VtDB3nhtvolKI1JQG2_gso`
+            if (!window.google || !window.google.maps) return;
+            
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode(
+              { location: { lat: latitude, lng: longitude } },
+              (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  setSearchInput(results[0].formatted_address);
+                  setShowLocationOptions(false);
+                  onLocationSelect?.({
+                    address: results[0].formatted_address,
+                    coordinates: { lat: latitude, lng: longitude }
+                  });
+                }
+              }
             );
-            const data = await response.json();
-            if (data.results[0]) {
-              setSearchInput(data.results[0].formatted_address);
-              setShowLocationOptions(false);
-            }
           } catch (error) {
             console.error("Error getting location:", error);
           }
@@ -38,42 +39,71 @@ const LocationSearchBar = () => {
     }
   };
 
-  const initializeAutocomplete = (input) => {
-    if (!isLoaded) return;
-    
-    const autocomplete = new window.google.maps.places.Autocomplete(input, {
-      types: ['(cities)'],
-      componentRestrictions: { country: "us" } // Restrict to US locations
-    });
+  useEffect(() => {
+    if (!window.google || !window.google.maps) return;
 
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (place.formatted_address) {
-        setSearchInput(place.formatted_address);
-        setShowLocationOptions(false);
-      }
-    });
+    const input = document.getElementById('location-search-input');
+    if (!input) return;
+
+    try {
+      const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        componentRestrictions: { country: "us" }
+      });
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.geometry && place.geometry.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          
+          setSearchInput(place.formatted_address);
+          setShowLocationOptions(false);
+          
+          onLocationSelect?.({
+            address: place.formatted_address,
+            coordinates: { lat, lng },
+            placeDetails: place
+          });
+        }
+      });
+
+      return () => {
+        window.google.maps.event.clearInstanceListeners(autocomplete);
+      };
+    } catch (error) {
+      console.error('Error initializing autocomplete:', error);
+    }
+  }, [isLoaded, onLocationSelect]);
+
+  const handleInputChange = (e) => {
+    setSearchInput(e.target.value);
   };
 
   const handleFocus = () => {
     setShowLocationOptions(true);
   };
 
-  if (loadError) return "Error loading maps";
-  if (!isLoaded) return "Loading...";
+  const handleBlur = () => {
+    setTimeout(() => setShowLocationOptions(false), 200);
+  };
+
+  useEffect(() => {
+    setIsLoaded(!!window.google?.maps);
+  }, [window.google?.maps]);
 
   return (
     <div className="location-search-container">
       <div className="search-input-wrapper">
         <i className="fas fa-search search-icon"></i>
         <input
+          id="location-search-input"
           type="text"
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={handleInputChange}
           onFocus={handleFocus}
-          placeholder="Enter location..."
+          onBlur={handleBlur}
+          placeholder="Enter any address, place, or landmark..."
           className="location-search-input"
-          ref={(input) => input && initializeAutocomplete(input)}
         />
       </div>
       
@@ -88,7 +118,7 @@ const LocationSearchBar = () => {
           </button>
           <div className="location-divider">or</div>
           <div className="search-prompt">
-            Enter your city, state, or zip code
+            Enter any address, place, neighborhood, or landmark
           </div>
         </div>
       )}

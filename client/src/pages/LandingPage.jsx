@@ -1,251 +1,94 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLoadScript } from "@react-google-maps/api";
 import './LandingPage.css';
 
+
 const LandingPage = () => {
+    const libraries = useMemo(() => ['places', 'marker'], []);
+    const navigate = useNavigate();
     const [searchInput, setSearchInput] = useState('');
-    const [showLocationOptions, setShowLocationOptions] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [restaurants, setRestaurants] = useState([]);
-    const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
+
+    const { isLoaded, loadError } = useLoadScript({
+        googleMapsApiKey: process.env.REACT_APP_GOOGLE_MAPS_API_KEY,
+        libraries,
+        mapIds: ["3d323ae4d3f413fd"]
+    });
 
     useEffect(() => {
-        const loadGoogleMaps = () => {
-            // Clear existing instance if any
-            if (window.google) {
-                window.google = undefined;
+        if (loadError) {
+            console.error('Google Maps API loading error:', loadError);
+        }
+    }, [loadError]);
+
+
+    const navigateToResults = useCallback((address, coordinates) => {
+        navigate('/restaurants', {
+            state: {
+                searchLocation: {
+                    address,
+                    coordinates
+                }
             }
-
-            // Remove any existing scripts
-            const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
-            existingScripts.forEach(script => script.remove());
-
-            return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.REACT_APP_GOOGLE_MAPS_API_KEY}&libraries=places`;
-                script.async = true;
-                script.defer = true;
-
-                script.addEventListener('load', () => {
-                    if (window.google && window.google.maps) {
-                        setGoogleMapsLoaded(true);
-                        console.log('Google Maps loaded successfully');
-                        resolve();
-                    } else {
-                        reject(new Error('Google Maps failed to load correctly'));
-                    }
-                });
-
-                script.addEventListener('error', () => {
-                    reject(new Error('Failed to load Google Maps'));
-                });
-
-                document.head.appendChild(script);
-            });
-        };
-
-        loadGoogleMaps().catch(error => {
-            console.error('Error loading Google Maps:', error);
-            setError(error.message);
         });
+    }, [navigate]);
 
-        return () => {
-            const script = document.querySelector('script[src*="maps.googleapis.com"]');
-            if (script) {
-                script.remove();
-            }
-        };
-    }, []);
-
-    // Initialize autocomplete when Google Maps is loaded
     useEffect(() => {
-        let autocomplete = null;
+        if (!isLoaded) return;
 
         const initializeAutocomplete = () => {
-            if (!window.google || !window.google.maps || !window.google.maps.places) {
-                console.error('Google Maps Places API not loaded');
-                return;
-            }
-
             const input = document.getElementById('location-search');
-            if (!input) {
-                console.error('Search input not found');
-                return;
-            }
+            if (!input) return;
 
-            try {
-                const autocomplete = new window.google.maps.places.Autocomplete(input, {
-                    types: ['(cities)'],
-                    componentRestrictions: { country: "us" }
-                });
-
-                autocomplete.addListener('place_changed', async () => {
-                    const place = autocomplete.getPlace();
-                    if (place.geometry && place.geometry.location) {
-                        setSearchInput(place.formatted_address);
-                        setShowLocationOptions(false);
-
-                        // Get location coordinates
-                        const lat = place.geometry.location.lat();
-                        const lng = place.geometry.location.lng();
-
-                        console.log('Selected place:', place.formatted_address, lat, lng);
-                        await searchNearbyRestaurants(lat, lng);
-                    } else {
-                        setError('No details available for this location');
-                    }
-                });
-
-                return autocomplete;
-            } catch (error) {
-                console.error('Error initializing autocomplete:', error);
-                setError('Error initializing location search');
-                return null;
-            }
-        };
-
-        if (googleMapsLoaded) {
-            initializeAutocomplete();
-        }
-
-        return () => {
-            if (autocomplete) {
-                // Cleanup autocomplete instance if needed
-                window.google.maps.event.clearInstanceListeners(autocomplete);
-            }
-        };
-    }, [googleMapsLoaded]);
-
-    const searchNearbyRestaurants = async (latitude, longitude) => {
-        if (!window.google || !window.google.maps || !window.google.maps.places) {
-            setError('Google Maps Places API is not loaded');
-            return;
-        }
-
-        try {
-            setLoading(true);
-            setError(null);
-
-            // Create a permanent map element
-            let mapDiv = document.getElementById('google-map-container');
-            if (!mapDiv) {
-                mapDiv = document.createElement('div');
-                mapDiv.id = 'google-map-container';
-                mapDiv.style.display = 'none';
-                document.body.appendChild(mapDiv);
-            }
-
-            const location = {
-                lat: typeof latitude === 'function' ? latitude() : parseFloat(latitude),
-                lng: typeof longitude === 'function' ? longitude() : parseFloat(longitude)
-            };
-
-            // Initialize the map
-            const map = new window.google.maps.Map(mapDiv, {
-                center: location,
-                zoom: 15
+            const autocomplete = new window.google.maps.places.Autocomplete(input, {
+                componentRestrictions: { country: "us" }
             });
 
-            // Wait for map to load
-            await new Promise((resolve) => {
-                map.addListener('idle', resolve);
-            });
-
-            // Create Places service
-            const service = new window.google.maps.places.PlacesService(map);
-
-            // Perform the nearby search
-            const results = await new Promise((resolve, reject) => {
-                service.nearbySearch({
-                    location: location,
-                    radius: 5000,
-                    type: ['restaurant']
-                }, (results, status) => {
-                    if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-                        resolve(results || []);
-                    } else {
-                        reject(new Error(`Places search failed: ${status}`));
-                    }
-                });
-            });
-
-            console.log('Found restaurants:', results);
-            setRestaurants(results);
-
-        } catch (err) {
-            console.error('Error in searchNearbyRestaurants:', err);
-            setError(`Error searching restaurants: ${err.message}`);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleCurrentLocation = () => {
-        if (!navigator.geolocation) {
-            setError('Geolocation is not supported by your browser');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                try {
-                    const { latitude, longitude } = position.coords;
-
-                    if (googleMapsLoaded) {
-                        const geocoder = new window.google.maps.Geocoder();
-                        const response = await new Promise((resolve, reject) => {
-                            geocoder.geocode(
-                                { location: { lat: latitude, lng: longitude } },
-                                (results, status) => {
-                                    if (status === 'OK' && results[0]) {
-                                        resolve(results[0]);
-                                    } else {
-                                        reject(new Error('Could not find address'));
-                                    }
-                                }
-                            );
-                        });
-
-                        setSearchInput(response.formatted_address);
-                        await searchNearbyRestaurants(latitude, longitude);
-                    }
-                } catch (err) {
-                    setError('Error getting location details: ' + err.message);
-                } finally {
-                    setLoading(false);
+            autocomplete.addListener('place_changed', () => {
+                const place = autocomplete.getPlace();
+                if (place.geometry && place.geometry.location) {
+                    setSearchInput(place.formatted_address);
+                    navigateToResults(
+                        place.formatted_address,
+                        {
+                            lat: place.geometry.location.lat(),
+                            lng: place.geometry.location.lng()
+                        }
+                    );
                 }
-            },
-            (error) => {
-                setError('Error accessing your location: ' + error.message);
-                setLoading(false);
-            }
-        );
-    };
+            });
+        };
+
+        initializeAutocomplete();
+    }, [isLoaded, navigateToResults]);
+
     const handleSearch = () => {
-        if (!searchInput) return;
+        if (!searchInput || !isLoaded) return;
 
-        // If we have google maps loaded and autocomplete instance
-        if (window.google && window.google.maps) {
-            const geocoder = new window.google.maps.Geocoder();
+        const geocoder = new window.google.maps.Geocoder();
+        setLoading(true);
 
-            geocoder.geocode({ address: searchInput }, (results, status) => {
-                if (status === 'OK' && results[0]) {
-                    const location = results[0].geometry.location;
-                    searchNearbyRestaurants(location.lat(), location.lng());
-                } else {
-                    setError('Could not find location. Please try again.');
-                }
-            });
-        }
+        geocoder.geocode({ address: searchInput }, (results, status) => {
+            setLoading(false);
+            if (status === 'OK' && results[0]) {
+                const location = results[0].geometry.location;
+                navigateToResults(
+                    searchInput,
+                    {
+                        lat: location.lat(),
+                        lng: location.lng()
+                    }
+                );
+            } else {
+                setError('Could not find this location');
+            }
+        });
     };
-    const handleFocus = () => setShowLocationOptions(true);
-    const handleBlur = () => {
-        setTimeout(() => setShowLocationOptions(false), 200);
-    };
 
+    if (loadError) return <div>Error loading Google Maps API. Please try again later.</div>;
+    if (!isLoaded) return <div>Loading Google Maps...</div>;
 
     return (
         <div className="landing-page">
@@ -256,40 +99,20 @@ const LandingPage = () => {
                         <input
                             id="location-search"
                             type="text"
-                            placeholder="Search restaurants near you..."
+                            placeholder="Enter any address..."
                             className="main-search-input"
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            onFocus={handleFocus}
-                            onBlur={handleBlur}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSearch();
-                                }
-                            }}
-                            disabled={loading || !googleMapsLoaded}
+                            disabled={loading}
                         />
                         <button
                             className="main-search-button"
-                            disabled={loading || !googleMapsLoaded}
+                            disabled={loading}
                             onClick={handleSearch}
                         >
                             <i className="fas fa-search"></i>
                         </button>
                     </div>
-
-                    {showLocationOptions && (
-                        <div className="location-options">
-                            <button
-                                className="use-location-btn"
-                                onClick={handleCurrentLocation}
-                                disabled={loading || !googleMapsLoaded}
-                            >
-                                <i className="fas fa-location-arrow"></i>
-                                {loading ? 'Getting location...' : 'Use current location'}
-                            </button>
-                        </div>
-                    )}
 
                     {error && (
                         <div className="error-message">
@@ -331,21 +154,6 @@ const LandingPage = () => {
                     </div>
                 </div>
             </div>
-
-            {restaurants.length > 0 && (
-                <div className="restaurants-section">
-                    <h2>Restaurants Near You</h2>
-                    <div className="restaurants-grid">
-                        {restaurants.map((restaurant) => (
-                            <div key={restaurant.place_id} className="restaurant-card">
-                                <h3>{restaurant.name}</h3>
-                                <p>{restaurant.vicinity}</p>
-                                <p>Rating: {restaurant.rating} ⭐</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
