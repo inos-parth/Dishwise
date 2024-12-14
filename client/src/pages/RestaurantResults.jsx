@@ -71,15 +71,19 @@ const RestaurantResults = () => {
                 body: JSON.stringify({ restaurants }),
             });
     
+            const result = await response.json();
+    
             if (!response.ok) {
-                throw new Error("Failed to save restaurants to the database");
+                console.error("Error response from server:", result);
+                throw new Error(result.message || "Failed to save restaurants to the database");
             }
     
-            console.log("Restaurants saved successfully");
+            console.log("Restaurants saved successfully:", result);
         } catch (err) {
-            console.error("Error saving restaurants:", err);
+            console.error("Error saving restaurants:", err.message);
         }
     };
+    
     
     // Use the saveRestaurantsToDB function after fetching restaurants
     useEffect(() => {
