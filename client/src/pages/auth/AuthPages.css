@@ -99,3 +99,18 @@
   .toggle-button:hover {
     text-decoration: underline;
   }
+
+  .navbar {
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
+  }
+  
+  .auth-box {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+  }
+  
+  .profile-container {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+  }

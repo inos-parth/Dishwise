@@ -37,7 +37,6 @@ const Navbar = () => {
               <div className="dropdown-content">
                 <Link to="/profile">Profile</Link>
                 <Link to="/favorites">Favorites</Link>
-                <Link to="/settings">Settings</Link>
                 <button onClick={handleLogout} className="logout-button">
                   <i className="fas fa-sign-out-alt"></i> Logout
                 </button>
