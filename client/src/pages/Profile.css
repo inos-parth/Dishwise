@@ -62,3 +62,18 @@
   .save-button:hover {
     background-color: #b71c1c;
   }
+
+  .navbar {
+    background-color: var(--secondary-bg);
+    color: var(--text-primary);
+  }
+  
+  .auth-box {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+  }
+  
+  .profile-container {
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+  }
