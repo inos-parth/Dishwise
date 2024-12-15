@@ -127,33 +127,6 @@ const LandingPage = () => {
                     )}
                 </div>
             </div>
-
-            <div className="categories-section">
-                <h2>Popular Categories</h2>
-                <div className="category-grid">
-                    <div className="category-card">
-                        <img
-                            src="https://images.unsplash.com/photo-1514326640560-7d063ef2aed5?w=400&h=300&q=80"
-                            alt="Fine Dining"
-                        />
-                        <h3>Fine Dining</h3>
-                    </div>
-                    <div className="category-card">
-                        <img
-                            src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&q=80"
-                            alt="Casual Dining"
-                        />
-                        <h3>Casual Dining</h3>
-                    </div>
-                    <div className="category-card">
-                        <img
-                            src="https://images.unsplash.com/photo-1513185158878-8d8c2a2a3da3?w=400&h=300&q=80"
-                            alt="Fast Food"
-                        />
-                        <h3>Fast Food</h3>
-                    </div>
-                </div>
-            </div>
         </div>
     );
 };

@@ -16,14 +16,22 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  phoneNumber: {
+    type: String },
+  address: { 
+    type: String },
   preferences: {
     dietaryRestrictions: [String],
     cuisinePreferences: [String]
   },
-  favorites: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Dish'
-  }]
+  favorites: [
+    {
+        dishId: { type: String, required: true },
+        name: {type: String},
+        price: {type: String},
+        image: {type: String},
+    }
+]
 }, { 
   timestamps: true 
 });

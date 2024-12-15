@@ -77,3 +77,55 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Error logging in' });
   }
 };
+
+/// Fetch user profile
+exports.getProfile = async (req, res) => {
+  try {
+      const user = await User.findById(req.user.id); // Fetch user by ID
+      if (!user) {
+          return res.status(404).json({ message: 'User not found' });
+      }
+      res.status(200).json({
+          name: user.name,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          address: user.address,
+      });
+  } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+exports.updateUserProfile = async (req, res) => {
+  const { name, phone, address } = req.body;
+
+  console.log('Request Body:', req.body); // Log the request body  
+
+  try {
+    const user = await User.findById(req.user.id); // Fetch user by ID
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.name = name || user.name;
+    user.phoneNumber = phone || user.phoneNumber;
+    user.address = address || user.address;
+
+    await user.save(); // Save updated user
+
+    console.log('Updated User:', user); // Log updated user data
+
+    res.status(200).json({
+      name: user.name,
+      email: user.email,
+      phone: user.phoneNumber,
+      address: user.address,
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+

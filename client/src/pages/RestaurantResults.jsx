@@ -3,6 +3,80 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useGoogleMap } from "../hooks/useGoogleMaps";
 import "./RestaurantResults.css";
 
+const RestaurantCard = ({ restaurant }) => {
+    const [showMenu, setShowMenu] = useState(false);
+    const [menuData, setMenuData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const navigate = useNavigate();
+
+    const handleViewMenu = () => {
+        navigate(`/restaurant/${restaurant.place_id}/menu`);
+    };
+
+    return (
+        <div className="restaurant-card">
+            {restaurant.photos?.[0] && (
+                <img
+                    src={restaurant.photos[0].getUrl()}
+                    alt={restaurant.name}
+                    className="restaurant-image"
+                />
+            )}
+            <div className="restaurant-info">
+                <h3>{restaurant.name}</h3>
+                <p>{restaurant.vicinity}</p>
+                <div className="restaurant-details">
+                    <span className="rating">
+                        {restaurant.rating ? `${restaurant.rating} ⭐` : "No rating"}
+                    </span>
+                    {restaurant.price_level && (
+                        <span className="price-level">
+                            {"$".repeat(restaurant.price_level)}
+                        </span>
+                    )}
+                </div>
+                {restaurant.opening_hours && (
+                    <p className={`status ${restaurant.opening_hours.isOpen
+                        ? restaurant.opening_hours.isOpen()
+                            ? "open"
+                            : "closed"
+                        : "unknown"
+                        }`}>
+                        {restaurant.opening_hours.isOpen
+                            ? restaurant.opening_hours.isOpen()
+                                ? "Open Now"
+                                : "Closed"
+                            : "No Opening Information"}
+                    </p>
+                )}
+                <button
+                    className="view-menu-button"
+                    onClick={handleViewMenu}
+                >
+                    View Menu
+                </button>
+
+                {showMenu && menuData && (
+                    <div className="menu-modal">
+                        <div className="menu-content">
+                            <h4>{restaurant.name} - Menu</h4>
+                            <button className="close-menu" onClick={() => setShowMenu(false)}>×</button>
+                            <div className="menu-items">
+                                {menuData.map((item, index) => (
+                                    <div key={index} className="menu-item">
+                                        <span className="item-name">{item.name}</span>
+                                        <span className="item-price">${item.price}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
 const RestaurantResults = () => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -13,11 +87,11 @@ const RestaurantResults = () => {
     const toggleMap = () => {
         setShowMap((prev) => !prev);
     };
-    // State for filters
+
     const [filters, setFilters] = useState({
-        cuisine: "", // E.g., "italian", "indian", etc.
+        cuisine: "",
         openNow: false,
-        priceLevel: null, // E.g., 1, 2, 3 (number of dollar signs)
+        priceLevel: null,
     });
 
     useEffect(() => {
@@ -70,22 +144,20 @@ const RestaurantResults = () => {
                 },
                 body: JSON.stringify({ restaurants }),
             });
-    
+
             const result = await response.json();
-    
+
             if (!response.ok) {
                 console.error("Error response from server:", result);
                 throw new Error(result.message || "Failed to save restaurants to the database");
             }
-    
+
             console.log("Restaurants saved successfully:", result);
         } catch (err) {
             console.error("Error saving restaurants:", err.message);
         }
     };
-    
-    
-    // Use the saveRestaurantsToDB function after fetching restaurants
+
     useEffect(() => {
         if (!loading && !error && restaurants.length > 0) {
             saveRestaurantsToDB(restaurants);
@@ -103,7 +175,6 @@ const RestaurantResults = () => {
                 </h1>
             </div>
 
-            {/* Filters Section */}
             <div className="filters-container">
                 <select name="cuisine" value={filters.cuisine} onChange={handleFilterChange}>
                     <option value="">All Cuisines</option>
@@ -129,7 +200,6 @@ const RestaurantResults = () => {
                 </select>
             </div>
 
-            {/* Results Section */}
             <div className="results-container">
                 {showMap && (
                     <div id="map" className="map-container">
@@ -156,45 +226,10 @@ const RestaurantResults = () => {
                     {!loading &&
                         !error &&
                         restaurants.map((restaurant) => (
-                            <div key={restaurant.place_id} className="restaurant-card">
-                                {restaurant.photos?.[0] && (
-                                    <img
-                                        src={restaurant.photos[0].getUrl()}
-                                        alt={restaurant.name}
-                                        className="restaurant-image"
-                                    />
-                                )}
-                                <div className="restaurant-info">
-                                    <h3>{restaurant.name}</h3>
-                                    <p>{restaurant.vicinity}</p>
-                                    <div className="restaurant-details">
-                                        <span className="rating">
-                                            {restaurant.rating
-                                                ? `${restaurant.rating} ⭐`
-                                                : "No rating"}
-                                        </span>
-                                        {restaurant.price_level && (
-                                            <span className="price-level">
-                                                {"$".repeat(restaurant.price_level)}
-                                            </span>
-                                        )}
-                                    </div>
-                                    {restaurant.opening_hours && (
-                                        <p className={`status ${restaurant.opening_hours.isOpen
-                                            ? restaurant.opening_hours.isOpen()
-                                                ? "open"
-                                                : "closed"
-                                            : "unknown"
-                                            }`}>
-                                            {restaurant.opening_hours.isOpen
-                                                ? restaurant.opening_hours.isOpen()
-                                                    ? "Open Now"
-                                                    : "Closed"
-                                                : "No Opening Information"}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
+                            <RestaurantCard
+                                key={restaurant.place_id}
+                                restaurant={restaurant}
+                            />
                         ))}
                 </div>
             </div>
