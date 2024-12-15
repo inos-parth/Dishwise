@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import { ThemeProvider } from './context/ThemeContext';
 import './styles/theme.css';
+import MenuPage from './pages/MenuPage';
 // Lazy load the routes
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const RestaurantResults = React.lazy(() => import('./pages/RestaurantResults'));
@@ -27,6 +28,7 @@ function App() {
               <Route path="/signup" element={<Signup />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/favorites" element={<Favorites />} />
+              <Route path="/restaurant/:placeId/menu" element={<MenuPage />} />
             </Routes>
           </Suspense>
         </main>

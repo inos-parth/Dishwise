@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const restaurantRoutes = require('./routes/restaurant');
+const favoritesRoutes = require('./routes/favorites');
 require('dotenv').config();
 
 const app = express();
@@ -34,5 +35,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/restaurants', restaurantRoutes);
+app.use('/api/restaurants/reviews', restaurantRoutes);
+app.use('/api/favorites', favoritesRoutes);
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
