@@ -58,7 +58,7 @@ const MenuPage = () => {
     const handleFavorite = async (dish) => {
         try {
             const token = localStorage.getItem("token");
-    
+
             const response = await fetch('http://localhost:8000/api/favorites/add', {
                 method: 'POST',
                 headers: {
@@ -72,14 +72,14 @@ const MenuPage = () => {
                     imageUrl: dish.imageUrl || "na", // Add fallback for imageUrl
                 }),
             });
-    
+
             if (!response.ok) {
                 throw new Error('Failed to add to favorites');
             }
-    
+
             const data = await response.json();
             console.log("Favorite added:", data);
-    
+
             alert(data.message || "Dish added to favorites!");
         } catch (error) {
             console.error('Error updating favorites:', error);
@@ -89,18 +89,27 @@ const MenuPage = () => {
 
 
     const handlePageChange = (direction) => {
-        if (selectedDish) {
-            const totalPages = Math.ceil((selectedDish.reviews || []).length / 3);
-            const nextPage = selectedDish.currentPage + direction;
+        setSelectedDish((prevDish) => {
+            const currentPage = prevDish.currentPage || 0; // Default to 0 if undefined
+            const totalPages = Math.ceil(prevDish.reviews.length / 3);
 
-            if (nextPage >= 0 && nextPage < totalPages) {
-                setSelectedDish({ ...selectedDish, currentPage: nextPage });
+            const newPage = currentPage + direction;
+
+            if (newPage >= 0 && newPage < totalPages) {
+                return { ...prevDish, currentPage: newPage };
             }
-        }
+            return prevDish; // Do not change state if out of bounds
+        });
     };
 
+
+
     const handleOpenModal = (dish) => {
-        setSelectedDish(dish); // Set the selected dish for the modal
+        setSelectedDish({
+            ...dish,
+            currentPage: 0, // Reset to page 0
+            reviews: dish.reviews || [], // Ensure reviews is always an array
+        });
     };
 
     const handleRatingChange = (rating) => {
@@ -218,8 +227,8 @@ const MenuPage = () => {
                             {selectedDish.reviews.length > 0 ? (
                                 selectedDish.reviews
                                     .slice(
-                                        selectedDish.currentPage * 3,
-                                        selectedDish.currentPage * 3 + 3
+                                        (selectedDish.currentPage || 0) * 3,
+                                        (selectedDish.currentPage || 0) * 3 + 3
                                     )
                                     .map((review, i) => (
                                         <div key={i} className="modal-review-item">
@@ -229,23 +238,29 @@ const MenuPage = () => {
                             ) : (
                                 <p>No reviews yet.</p>
                             )}
+
+
+                            {/* Pagination */}
                             <div className="pagination">
                                 <button
                                     onClick={() => handlePageChange(-1)}
-                                    disabled={selectedDish.currentPage === 0}
+                                    disabled={(selectedDish.currentPage || 0) === 0} // First page
                                 >
                                     &#8592; Previous
                                 </button>
                                 <button
                                     onClick={() => handlePageChange(1)}
                                     disabled={
-                                        (selectedDish.currentPage + 1) * 3 >= (selectedDish.reviews || []).length
-                                    }
+                                        (selectedDish.currentPage || 0) + 1 >= Math.ceil(selectedDish.reviews.length / 3)
+                                    } // Last page
                                 >
                                     Next &#8594;
                                 </button>
                             </div>
+
                         </div>
+
+
                         <div className="modal-add-review">
                             <h3>Add a Review</h3>
                             <textarea
